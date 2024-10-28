@@ -3,15 +3,30 @@ name: Release Go project
 on:
   push:
     tags:
-      - "v*"
+      - "v*.*.*"
 
 permissions:
   contents: write
   packages: write
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.2'
+
+      - name: Run tests
+        run: go test ./... -v
+
   goreleaser:
     runs-on: ubuntu-latest
+    needs: test
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,18 +46,4 @@ jobs:
           version: latest
           args: release --clean
         env:
-          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
-
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.23.2'
-
-      - name: Run tests
-        run: go test ./... -v
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
