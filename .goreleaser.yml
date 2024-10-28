@@ -1,0 +1,35 @@
+version: 2
+
+project_name: gossy
+
+builds:
+  - id: gossy
+    main: .
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - format: tar.gz
+    files:
+      - README.md
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else }}{{ .Arch }}{{ end }}
+
+brews:
+  - repository:
+      owner: mangchhe
+      name: homebrew-gossy
+    commit_author:
+      name: joohyun.ha
+      email: mylifeforcoding@gmail.com
+    homepage: "https://github.com/mangchhe/homebrew-gossy"
+    description: "Gossy: A versatile AWS CLI tool for efficient management across AWS services."
+    install: |
+      bin.install "gossy"
