@@ -8,8 +8,9 @@ import (
 )
 
 type InstanceInfo struct {
-	ID   string
-	Name string
+	ID    string
+	Name  string
+	State string
 }
 
 func GetEC2Instances(profile string) ([]InstanceInfo, error) {
@@ -31,6 +32,7 @@ func GetEC2Instances(profile string) ([]InstanceInfo, error) {
 	for _, reservation := range result.Reservations {
 		for _, instance := range reservation.Instances {
 			instanceName := "(no name)"
+			instanceState := string(instance.State.Name)
 
 			for _, tag := range instance.Tags {
 				if *tag.Key == "Name" {
@@ -40,8 +42,9 @@ func GetEC2Instances(profile string) ([]InstanceInfo, error) {
 			}
 
 			instances = append(instances, InstanceInfo{
-				ID:   *instance.InstanceId,
-				Name: instanceName,
+				ID:    *instance.InstanceId,
+				Name:  instanceName,
+				State: instanceState,
 			})
 		}
 	}

@@ -33,7 +33,7 @@ func chooseInstance(profile string, lastInstanceID string) {
 
 		instanceOptions := make([]string, len(instances))
 		for i, instance := range instances {
-			instanceOptions[i] = fmt.Sprintf("%-*s (%s)", maxNameLength, instance.Name, instance.ID)
+			instanceOptions[i] = fmt.Sprintf("%-*s (%s) - %s", maxNameLength, instance.Name, instance.ID, instance.State)
 		}
 
 		var selectedInstanceIndex int
