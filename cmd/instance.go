@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"gossy/internal/aws"
 	"gossy/internal/storage"
+	"gossy/internal/util"
 
 	"github.com/AlecAivazis/survey/v2"
 )
 
 func chooseInstance(profile string, lastInstanceID string) {
-	// First, let user choose between EC2 and ECS
-	serviceOptions := []string{"EC2 Instance", "ECS Pod"}
+	serviceOptions := []string{util.FormatServiceType("EC2 Instance"), util.FormatServiceType("ECS Pod")}
 	var selectedService string
 	servicePrompt := &survey.Select{
 		Message: "Select service type:",
@@ -18,28 +18,29 @@ func chooseInstance(profile string, lastInstanceID string) {
 	}
 	err := survey.AskOne(servicePrompt, &selectedService)
 	if err != nil {
-		fmt.Println("Error selecting service type.")
+		util.PrintError("Service selection cancelled")
 		return
 	}
 
-	if selectedService == "ECS Pod" {
+	if selectedService == util.FormatServiceType("ECS Pod") {
+
 		chooseECSConnection(profile)
 		return
 	}
 
-	// Continue with EC2 instance selection
+
 	var selectedInstanceID string
 	if lastInstanceID != "" {
 		selectedInstanceID = lastInstanceID
 	} else {
 		instances, err := aws.GetEC2Instances(profile)
 		if err != nil {
-			fmt.Printf("Error fetching EC2 instances: %v\n", err)
+			util.PrintError(fmt.Sprintf("Failed to fetch EC2 instances: %v", err))
 			return
 		}
 
 		if len(instances) == 0 {
-			fmt.Println("No instances found for this profile.")
+			util.PrintWarning("No EC2 instances found for this profile.")
 			return
 		}
 
@@ -52,7 +53,8 @@ func chooseInstance(profile string, lastInstanceID string) {
 
 		instanceOptions := make([]string, len(instances))
 		for i, instance := range instances {
-			instanceOptions[i] = fmt.Sprintf("%-*s (%s) - %s", maxNameLength, instance.Name, instance.ID, instance.State)
+			statusFormatted := util.FormatStatus(instance.State)
+			instanceOptions[i] = fmt.Sprintf("%-*s (%s) - %s", maxNameLength, instance.Name, instance.ID, statusFormatted)
 		}
 
 		var selectedInstanceIndex int
@@ -62,14 +64,15 @@ func chooseInstance(profile string, lastInstanceID string) {
 		}
 		err = survey.AskOne(instancePrompt, &selectedInstanceIndex)
 		if err != nil {
-			fmt.Println("Error selecting instance.")
+			util.PrintError("Instance selection cancelled")
 			return
 		}
 
 		selectedInstanceID = instances[selectedInstanceIndex].ID
 	}
 
-	connectionOptions := []string{"Instance (SSM)", "DB (Port Forwarding)"}
+
+	connectionOptions := []string{util.FormatConnectionType("Instance (SSM)"), util.FormatConnectionType("DB (Port Forwarding)")}
 	var connectionType string
 	connectionPrompt := &survey.Select{
 		Message: "Select connection type:",
@@ -77,11 +80,12 @@ func chooseInstance(profile string, lastInstanceID string) {
 	}
 	err = survey.AskOne(connectionPrompt, &connectionType)
 	if err != nil {
-		fmt.Println("Error selecting connection type.")
+		util.PrintError("Connection type selection cancelled")
 		return
 	}
 
-	if connectionType == "Instance (SSM)" {
+	if connectionType == util.FormatConnectionType("Instance (SSM)") {
+
 		err = storage.RecordLastSession(storage.LastSession{
 			Profile:    profile,
 			InstanceID: selectedInstanceID,
@@ -89,13 +93,17 @@ func chooseInstance(profile string, lastInstanceID string) {
 		})
 
 		if err != nil {
-			fmt.Printf("Failed to record last session: %v\n", err)
+			util.PrintWarning(fmt.Sprintf("Could not save session: %v", err))
 		}
 
+
 		if err := aws.StartSession(profile, selectedInstanceID); err != nil {
-			fmt.Printf("Failed to start SSM session: %v\n", err)
+			util.PrintError(fmt.Sprintf("Failed to start SSM session: %v", err))
+		} else {
+			util.PrintSuccess("SSM session established!")
 		}
-	} else if connectionType == "DB (Port Forwarding)" {
+	} else if connectionType == util.FormatConnectionType("DB (Port Forwarding)") {
+
 		chooseRDSInstance(profile, selectedInstanceID)
 	}
 }

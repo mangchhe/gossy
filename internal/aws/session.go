@@ -7,7 +7,6 @@ import (
 )
 
 func StartInstanceConnection(profile, instanceID string) error {
-	fmt.Printf("Starting SSM session to instance %s...\n", instanceID)
 	if err := StartSession(profile, instanceID); err != nil {
 		return fmt.Errorf("Failed to start SSM session: %v", err)
 	}
@@ -32,13 +31,11 @@ func StartRDSConnection(profile, instanceID, databaseID string) error {
 	})
 
 	if err != nil {
-		fmt.Printf("Failed to record last session: %v\n", err)
 	}
 
 	if err := StartPortForwardingSession(profile, instanceID, selectedRDS.Endpoint, selectedRDS.Port, int32(localPort)); err != nil {
 		return fmt.Errorf("Failed to start port-forwarding session: %v", err)
 	}
 
-	fmt.Printf("Port forwarding started on local port %d for RDS instance %s\n", localPort, selectedRDS.ID)
 	return nil
 }

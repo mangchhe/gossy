@@ -4,24 +4,27 @@ import (
 	"fmt"
 	"gossy/internal/aws"
 	"gossy/internal/storage"
+	"gossy/internal/util"
 
 	"github.com/AlecAivazis/survey/v2"
 )
 
 func chooseECSConnection(profile string) {
 	// Get ECS clusters
+
 	clusters, err := aws.GetECSClusters(profile)
 	if err != nil {
-		fmt.Printf("Error fetching ECS clusters: %v\n", err)
+		util.PrintError(fmt.Sprintf("Failed to fetch ECS clusters: %v", err))
 		return
 	}
 
 	if len(clusters) == 0 {
-		fmt.Println("No ECS clusters found for this profile.")
+		util.PrintWarning("No ECS clusters found for this profile.")
 		return
 	}
 
 	// Select cluster
+	
 	clusterOptions := make([]string, len(clusters))
 	for i, cluster := range clusters {
 		clusterOptions[i] = cluster.Name
@@ -34,21 +37,22 @@ func chooseECSConnection(profile string) {
 	}
 	err = survey.AskOne(clusterPrompt, &selectedClusterIndex)
 	if err != nil {
-		fmt.Println("Error selecting cluster.")
+		util.PrintError("Cluster selection cancelled")
 		return
 	}
 
 	selectedCluster := clusters[selectedClusterIndex]
 
 	// Get tasks for selected cluster
+
 	tasks, err := aws.GetECSTasks(profile, selectedCluster.Arn)
 	if err != nil {
-		fmt.Printf("Error fetching ECS tasks: %v\n", err)
+		util.PrintError(fmt.Sprintf("Failed to fetch ECS tasks: %v", err))
 		return
 	}
 
 	if len(tasks) == 0 {
-		fmt.Println("No running tasks found in this cluster.")
+		util.PrintWarning("No running ECS tasks found in this cluster.")
 		return
 	}
 
@@ -57,8 +61,9 @@ func chooseECSConnection(profile string) {
 	for i, task := range tasks {
 		// Extract task ID from ARN for display
 		taskId := aws.ExtractTaskIdFromArn(task.TaskArn)
+		statusFormatted := util.FormatStatus(task.LastStatus)
 		// Display format: "service-name/task-definition-name (task-id) - status"
-		taskOptions[i] = fmt.Sprintf("%s/%s (%s) - %s", task.ServiceName, task.TaskDefinitionName, taskId[:8], task.LastStatus)
+		taskOptions[i] = fmt.Sprintf("%s/%s (%s) - %s", task.ServiceName, task.TaskDefinitionName, taskId[:8], statusFormatted)
 	}
 
 	var selectedTaskIndex int
@@ -68,28 +73,30 @@ func chooseECSConnection(profile string) {
 	}
 	err = survey.AskOne(taskPrompt, &selectedTaskIndex)
 	if err != nil {
-		fmt.Println("Error selecting task.")
+		util.PrintError("Task selection cancelled")
 		return
 	}
 
 	selectedTask := tasks[selectedTaskIndex]
 
 	// Get containers for selected task
+
 	containers, err := aws.GetECSContainers(profile, selectedCluster.Arn, selectedTask.TaskArn)
 	if err != nil {
-		fmt.Printf("Error fetching ECS containers: %v\n", err)
+		util.PrintError(fmt.Sprintf("Failed to fetch ECS containers: %v", err))
 		return
 	}
 
 	if len(containers) == 0 {
-		fmt.Println("No containers found in this task.")
+		util.PrintWarning("No containers found in this task.")
 		return
 	}
 
 	// Select container
 	containerOptions := make([]string, len(containers))
 	for i, container := range containers {
-		containerOptions[i] = fmt.Sprintf("%s (%s)", container.Name, container.Status)
+		statusFormatted := util.FormatStatus(container.Status)
+		containerOptions[i] = fmt.Sprintf("%s - %s", container.Name, statusFormatted)
 	}
 
 	var selectedContainerIndex int
@@ -99,11 +106,12 @@ func chooseECSConnection(profile string) {
 	}
 	err = survey.AskOne(containerPrompt, &selectedContainerIndex)
 	if err != nil {
-		fmt.Println("Error selecting container.")
+		util.PrintError("Container selection cancelled")
 		return
 	}
 
 	selectedContainer := containers[selectedContainerIndex]
+
 
 	// Record session (we'll store cluster name in InstanceID field and container name in DatabaseID field for ECS sessions)
 	err = storage.RecordLastSession(storage.LastSession{
@@ -112,13 +120,16 @@ func chooseECSConnection(profile string) {
 		DatabaseID: selectedContainer.Name,
 	})
 	if err != nil {
-		fmt.Printf("Failed to record last session: %v\n", err)
+		util.PrintWarning(fmt.Sprintf("Could not save session: %v", err))
 	}
 
 	// Start ECS session
 	taskId := aws.ExtractTaskIdFromArn(selectedTask.TaskArn)
+
 	if err := aws.StartECSSession(profile, selectedCluster.Name, taskId, selectedContainer.Name); err != nil {
-		fmt.Printf("Failed to start ECS session: %v\n", err)
+		util.PrintError(fmt.Sprintf("Failed to start ECS session: %v", err))
+	} else {
+		util.PrintSuccess("ECS session established!")
 	}
 }
 
