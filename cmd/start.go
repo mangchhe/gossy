@@ -10,6 +10,7 @@ import (
 )
 
 func Run() {
+	util.SetShowCommandHistory(ShowCommandHistory)
 	util.InitializeScreen()
 
 	profiles, err := aws.GetAWSProfiles()

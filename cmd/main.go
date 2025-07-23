@@ -7,6 +7,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var ShowCommandHistory bool
+
 var rootCmd = &cobra.Command{
 	Use:   "gossy",
 	Short: "Gossy: A versatile AWS CLI tool for efficient management across AWS services.",
@@ -16,6 +18,7 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
+	rootCmd.PersistentFlags().BoolVarP(&ShowCommandHistory, "history", "H", false, "Show command history in output")
 }
 
 func Execute() {

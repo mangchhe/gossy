@@ -26,6 +26,7 @@ var HeaderDisplayed = false
 var CurrentProfile = "None"
 var CurrentServiceType = "None"
 var CurrentCommand = ""
+var ShowCommandHistory = false
 
 func PrintHeader(title string, emoji string) {
 	fmt.Println()
@@ -113,11 +114,17 @@ func UpdateCommand(command string) {
 	}
 }
 
+func SetShowCommandHistory(show bool) {
+	ShowCommandHistory = show
+}
+
 func PrintCommandLine() {
-	if CurrentCommand != "" {
-		Command.Printf("Command: %s\n", CurrentCommand)
-	} else {
-		Muted.Println("Select an option to see command...")
+	if ShowCommandHistory {
+		if CurrentCommand != "" {
+			Command.Printf("Command: %s\n", CurrentCommand)
+		} else {
+			Muted.Println("Select an option to see command...")
+		}
 	}
 }
 
