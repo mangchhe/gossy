@@ -10,8 +10,9 @@ import (
 )
 
 func chooseECSConnection(profile string) {
+	util.PrintFixedCommand("aws ecs execute-command", "--profile", profile)
+	
 	// Get ECS clusters
-
 	clusters, err := aws.GetECSClusters(profile)
 	if err != nil {
 		util.PrintError(fmt.Sprintf("Failed to fetch ECS clusters: %v", err))
@@ -24,7 +25,6 @@ func chooseECSConnection(profile string) {
 	}
 
 	// Select cluster
-	
 	clusterOptions := make([]string, len(clusters))
 	for i, cluster := range clusters {
 		clusterOptions[i] = cluster.Name
@@ -42,6 +42,9 @@ func chooseECSConnection(profile string) {
 	}
 
 	selectedCluster := clusters[selectedClusterIndex]
+	command := fmt.Sprintf("aws ecs execute-command --profile %s --cluster %s", profile, selectedCluster.Name)
+	util.UpdateCommand(command)
+	util.PrintFixedCommand("aws ecs execute-command", "--profile", profile, "--cluster", selectedCluster.Name)
 
 	// Get tasks for selected cluster
 
@@ -59,10 +62,8 @@ func chooseECSConnection(profile string) {
 	// Select task
 	taskOptions := make([]string, len(tasks))
 	for i, task := range tasks {
-		// Extract task ID from ARN for display
 		taskId := aws.ExtractTaskIdFromArn(task.TaskArn)
 		statusFormatted := util.FormatStatus(task.LastStatus)
-		// Display format: "service-name/task-definition-name (task-id) - status"
 		taskOptions[i] = fmt.Sprintf("%s/%s (%s) - %s", task.ServiceName, task.TaskDefinitionName, taskId[:8], statusFormatted)
 	}
 
@@ -78,9 +79,12 @@ func chooseECSConnection(profile string) {
 	}
 
 	selectedTask := tasks[selectedTaskIndex]
+	taskId := aws.ExtractTaskIdFromArn(selectedTask.TaskArn)
+	command = fmt.Sprintf("aws ecs execute-command --profile %s --cluster %s --task %s", profile, selectedCluster.Name, taskId)
+	util.UpdateCommand(command)
+	util.PrintFixedCommand("aws ecs execute-command", "--profile", profile, "--cluster", selectedCluster.Name, "--task", taskId)
 
 	// Get containers for selected task
-
 	containers, err := aws.GetECSContainers(profile, selectedCluster.Arn, selectedTask.TaskArn)
 	if err != nil {
 		util.PrintError(fmt.Sprintf("Failed to fetch ECS containers: %v", err))
@@ -111,6 +115,9 @@ func chooseECSConnection(profile string) {
 	}
 
 	selectedContainer := containers[selectedContainerIndex]
+	command = fmt.Sprintf("aws ecs execute-command --profile %s --cluster %s --task %s --container %s --interactive --command /bin/sh", profile, selectedCluster.Name, taskId, selectedContainer.Name)
+	util.UpdateCommand(command)
+	util.PrintFixedCommand("aws ecs execute-command", "--profile", profile, "--cluster", selectedCluster.Name, "--task", taskId, "--container", selectedContainer.Name, "--interactive", "--command", "/bin/sh")
 
 
 	// Record session (we'll store cluster name in InstanceID field and container name in DatabaseID field for ECS sessions)
@@ -122,9 +129,6 @@ func chooseECSConnection(profile string) {
 	if err != nil {
 		util.PrintWarning(fmt.Sprintf("Could not save session: %v", err))
 	}
-
-	// Start ECS session
-	taskId := aws.ExtractTaskIdFromArn(selectedTask.TaskArn)
 
 	if err := aws.StartECSSession(profile, selectedCluster.Name, taskId, selectedContainer.Name); err != nil {
 		util.PrintError(fmt.Sprintf("Failed to start ECS session: %v", err))

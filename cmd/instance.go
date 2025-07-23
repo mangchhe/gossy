@@ -10,6 +10,8 @@ import (
 )
 
 func chooseInstance(profile string, lastInstanceID string) {
+	util.PrintFixedCommand("aws ssm start-session", "--profile", profile)
+	
 	serviceOptions := []string{util.FormatServiceType("EC2 Instance"), util.FormatServiceType("ECS Pod")}
 	var selectedService string
 	servicePrompt := &survey.Select{
@@ -23,10 +25,12 @@ func chooseInstance(profile string, lastInstanceID string) {
 	}
 
 	if selectedService == util.FormatServiceType("ECS Pod") {
-
+		util.UpdateServiceType("ECS")
 		chooseECSConnection(profile)
 		return
 	}
+
+	util.UpdateServiceType("EC2")
 
 
 	var selectedInstanceID string
@@ -69,6 +73,9 @@ func chooseInstance(profile string, lastInstanceID string) {
 		}
 
 		selectedInstanceID = instances[selectedInstanceIndex].ID
+		command := fmt.Sprintf("aws ssm start-session --profile %s --target %s", profile, selectedInstanceID)
+		util.UpdateCommand(command)
+		util.PrintFixedCommand("aws ssm start-session", "--profile", profile, "--target", selectedInstanceID)
 	}
 
 
@@ -85,7 +92,10 @@ func chooseInstance(profile string, lastInstanceID string) {
 	}
 
 	if connectionType == util.FormatConnectionType("Instance (SSM)") {
-
+		command := fmt.Sprintf("aws ssm start-session --profile %s --target %s", profile, selectedInstanceID)
+		util.UpdateCommand(command)
+		util.PrintFixedCommand("aws ssm start-session", "--profile", profile, "--target", selectedInstanceID)
+		
 		err = storage.RecordLastSession(storage.LastSession{
 			Profile:    profile,
 			InstanceID: selectedInstanceID,
@@ -96,14 +106,15 @@ func chooseInstance(profile string, lastInstanceID string) {
 			util.PrintWarning(fmt.Sprintf("Could not save session: %v", err))
 		}
 
-
 		if err := aws.StartSession(profile, selectedInstanceID); err != nil {
 			util.PrintError(fmt.Sprintf("Failed to start SSM session: %v", err))
 		} else {
 			util.PrintSuccess("SSM session established!")
 		}
 	} else if connectionType == util.FormatConnectionType("DB (Port Forwarding)") {
-
+		command := fmt.Sprintf("aws ssm start-session --profile %s --target %s --document-name AWS-StartPortForwardingSessionToRemoteHost", profile, selectedInstanceID)
+		util.UpdateCommand(command)
+		util.PrintFixedCommand("aws ssm start-session", "--profile", profile, "--target", selectedInstanceID, "--document-name", "AWS-StartPortForwardingSessionToRemoteHost")
 		chooseRDSInstance(profile, selectedInstanceID)
 	}
 }

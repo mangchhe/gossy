@@ -5,6 +5,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"gossy/internal/aws"
 	"gossy/internal/storage"
+	"gossy/internal/util"
 )
 
 func chooseRDSInstance(profile string, instanceID string) {
@@ -38,6 +39,11 @@ func chooseRDSInstance(profile string, instanceID string) {
 	selectedRDS := rdsInstances[selectedRDSIndex]
 	localPort := selectedRDS.Port
 
+	parameters := fmt.Sprintf(`'{"portNumber":["%d"],"localPortNumber":["%d"],"host":["%s"]}'`, selectedRDS.Port, localPort, selectedRDS.Endpoint)
+	command := fmt.Sprintf("aws ssm start-session --profile %s --target %s --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters %s", profile, instanceID, parameters)
+	util.UpdateCommand(command)
+	util.PrintFixedCommand("aws ssm start-session", "--profile", profile, "--target", instanceID, "--document-name", "AWS-StartPortForwardingSessionToRemoteHost", "--parameters", parameters)
+
 	err = storage.RecordLastSession(storage.LastSession{
 		Profile:    profile,
 		InstanceID: instanceID,
@@ -45,7 +51,6 @@ func chooseRDSInstance(profile string, instanceID string) {
 	})
 
 	if err != nil {
-		fmt.Printf("Failed to record last session: %v\n", err)
 	}
 
 	if err := aws.StartPortForwardingSession(profile, instanceID, selectedRDS.Endpoint, selectedRDS.Port, localPort); err != nil {
