@@ -9,6 +9,25 @@ import (
 )
 
 func chooseInstance(profile string, lastInstanceID string) {
+	// First, let user choose between EC2 and ECS
+	serviceOptions := []string{"EC2 Instance", "ECS Pod"}
+	var selectedService string
+	servicePrompt := &survey.Select{
+		Message: "Select service type:",
+		Options: serviceOptions,
+	}
+	err := survey.AskOne(servicePrompt, &selectedService)
+	if err != nil {
+		fmt.Println("Error selecting service type.")
+		return
+	}
+
+	if selectedService == "ECS Pod" {
+		chooseECSConnection(profile)
+		return
+	}
+
+	// Continue with EC2 instance selection
 	var selectedInstanceID string
 	if lastInstanceID != "" {
 		selectedInstanceID = lastInstanceID
@@ -56,7 +75,7 @@ func chooseInstance(profile string, lastInstanceID string) {
 		Message: "Select connection type:",
 		Options: connectionOptions,
 	}
-	err := survey.AskOne(connectionPrompt, &connectionType)
+	err = survey.AskOne(connectionPrompt, &connectionType)
 	if err != nil {
 		fmt.Println("Error selecting connection type.")
 		return

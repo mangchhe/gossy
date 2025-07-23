@@ -8,6 +8,7 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/aws/aws-sdk-go-v2/config v1.28.0
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.186.0
+	github.com/aws/aws-sdk-go-v2/service/ecs v1.44.0
 	github.com/aws/aws-sdk-go-v2/service/rds v1.88.0
 	github.com/spf13/cobra v1.8.1
 	gopkg.in/ini.v1 v1.67.0
