@@ -150,7 +150,7 @@ func PrintGossyBanner() {
 		color.New(color.FgGreen).Sprint(CurrentProfile),
 		color.New(color.FgYellow).Sprint(CurrentServiceType),
 		color.New(color.FgCyan).Sprint("Interactive"),
-		color.New(color.FgMagenta).Sprint("v1.0.0"))
+		color.New(color.FgMagenta).Sprint("v0.1.0"))
 	fmt.Println()
 	
 	Primary.Print(strings.Repeat("━", 80))
